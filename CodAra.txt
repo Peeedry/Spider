@@ -1,0 +1,121 @@
+#include <Servo.h>
+
+// --- MOTORES DA PATA DIANTEIRA DIREITA ---
+Servo nadega; // Pino 2 
+Servo joelho; // Pino 3 
+Servo pe;     // Pino 4 
+
+// --- MOTORES DE ESTABILIZAÇÃO ---
+Servo pe2;    // Pino 8 (EIXO INVERTIDO)
+Servo pe3;    // Pino 9
+Servo pe4;    // Pino 10
+
+// ==========================================================
+// ÁREA DE CALIBRAGEM DAS POSIÇÕES INICIAIS
+// ==========================================================
+int inicioNadega = 90;  
+int inicioJoelho = 45; 
+int inicioPe     = 110;     
+int joelhoLevantado = 90; 
+
+int anguloPe2 = 155; // Pino 8
+int anguloPe3 = 90;  // Pino 9
+int anguloPe4 = 90;  // Pino 10
+
+// O quanto o corpo vai balançar na dança (em graus)
+int amplitudeDanca = 25; 
+// ==========================================================
+
+// Função de movimento suave tradicional
+void moverSuave(Servo &motor, int anguloDestino, int velocidade) {
+  int anguloAtual = motor.read();
+  
+  if (anguloAtual < anguloDestino) {
+    for (int pos = anguloAtual; pos <= anguloDestino; pos++) {
+      motor.write(pos);
+      delay(velocidade);
+    }
+  } else {
+    for (int pos = anguloAtual; pos >= anguloDestino; pos--) {
+      motor.write(pos);
+      delay(velocidade);
+    }
+  }
+}
+
+// Aceno limpo, focado só no pé
+void executarOi() {
+  moverSuave(pe, 120, 20); 
+  delay(200);              
+  moverSuave(pe, 60, 20);  
+  delay(200);              
+  moverSuave(pe, inicioPe, 20); // Volta ao centro exato
+  delay(300);              
+}
+
+// Lógica da Dança com matemática para o motor invertido
+void dancinha() {
+  // Fase 1: Inclina para um lado (Pés 4 e o pé do aceno sobem, Pés 8 e 9 descem)
+  for (int i = 0; i <= amplitudeDanca; i++) {
+    pe.write(inicioPe - i);       // Normal: (-) empurra corpo pra cima
+    pe4.write(anguloPe4 - i);     // Normal: (-) empurra corpo pra cima
+    pe2.write(anguloPe2 - i);     // INVERTIDO: (-) abaixa o corpo
+    pe3.write(anguloPe3 + i);     // Normal: (+) abaixa o corpo
+    delay(20);
+  }
+  
+  // Fase 2: Gangorra total para o outro lado
+  for (int i = 0; i <= amplitudeDanca * 2; i++) {
+    pe.write((inicioPe - amplitudeDanca) + i);   // Vai abaixando
+    pe4.write((anguloPe4 - amplitudeDanca) + i); // Vai abaixando
+    pe2.write((anguloPe2 - amplitudeDanca) + i); // INVERTIDO: Vai subindo
+    pe3.write((anguloPe3 + amplitudeDanca) - i); // Vai subindo
+    delay(20);
+  }
+
+  // Fase 3: Volta para o centro (equilíbrio perfeito no chão)
+  for (int i = 0; i <= amplitudeDanca; i++) {
+    pe.write((inicioPe + amplitudeDanca) - i);   
+    pe4.write((anguloPe4 + amplitudeDanca) - i); 
+    pe2.write((anguloPe2 + amplitudeDanca) - i); 
+    pe3.write((anguloPe3 - amplitudeDanca) + i); 
+    delay(20);
+  }
+  delay(200); // Pausa curtinha entre cada rebolada
+}
+
+void setup() {
+  // 1 - ESTABILIZAÇÃO IMEDIATA 
+  nadega.attach(2);  nadega.write(inicioNadega); delay(100);
+  joelho.attach(3);  joelho.write(inicioJoelho); delay(100);
+  pe.attach(4);      pe.write(inicioPe);         delay(100);
+  pe2.attach(8);     pe2.write(anguloPe2);       delay(100);
+  pe3.attach(9);     pe3.write(anguloPe3);       delay(100);
+  pe4.attach(10);    pe4.write(anguloPe4);
+
+  // O tempo de segurança para você ligar a fonte de 5V
+  delay(7000); 
+}
+
+void loop() {
+  // === O CICLO INFINITO DA ARANHA ===
+
+  // Passo 1: Levanta a pata
+  moverSuave(joelho, joelhoLevantado, 20); 
+  delay(300);
+
+  // Passo 2: Dá Oi (paradinha no centro, sem girar o corpo)
+  executarOi();
+
+  // Passo 3: Volta para o chão (Estado original)
+  moverSuave(joelho, inicioJoelho, 20); 
+  delay(800); // Fica um tempo plantada firme no chão
+
+  // Passo 4: Executa a dança sincronizada exatas 3 vezes
+  for(int d = 0; d < 3; d++) {
+    dancinha();
+  }
+
+  // Passo 5: Respira antes de recomeçar
+  delay(1500); 
+}
